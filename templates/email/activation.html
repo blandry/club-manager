@@ -1,0 +1,6 @@
+{% extends "email/base.html" %}
+
+{% block content %}
+<h3>account activation</h3>
+<p style="margin-top: 15px;">To activate your account, go to the following url: <strong><a href="{{ activation_link|safe }}">{{ activation_link|safe }}</a></strong></p>
+{% endblock %}
