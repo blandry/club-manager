@@ -18,6 +18,7 @@ from flask.ext.uploads import configure_uploads, UploadSet, IMAGES
 from flask.ext.admin import Admin, BaseView, expose
 from flask.ext.admin.model import BaseModelView
 from flask.ext.admin.contrib.sqlamodel import ModelView
+from forms import *
 
 # # # # #
 
@@ -28,12 +29,7 @@ db = SQLAlchemy(app)
 
 login_manager = LoginManager()
 login_manager.setup_app(app)
-login_manager.login_view = "auth_required"
-@app.route("/auth-required", methods=["GET", "POST"])
-def auth_required():
-    resp = jsonify({'message': "Authentication required"})
-    resp.status_code = 401
-    return resp
+login_manager.login_view = "login"
 @login_manager.user_loader
 def load_user(id):
     return User.query.get(id)
@@ -352,39 +348,37 @@ class ReimbursementItem(db.Model):
 
 # # # # #
 
-@app.route("/register", methods=["POST"])
+@app.route("/register", methods=["GET", "POST"])
 def register():
-    if not User.query.filter_by(email=unicode(request.form['email'])).first():
-        thumbnail = userthumbnails.save(request.files['thumbnail'])
-        user = User(request.form['email'], request.form['password'], first_name=request.form['first_name'], 
-                    last_name=request.form['last_name'], thumbnail=thumbnail)
-        activation_token = ActivationToken(user)
-        db.session.add(user)
-        db.session.add(activation_token)
-        db.session.commit()
-        email_activation_link(user.email, user.id, activation_token.value)
-        resp = jsonify({'message': 'Success'})
-        resp.status_code = 201
-        return resp
-    resp = jsonify({'message': 'Email address already registered'})
-    resp.status_code = 403
-    return resp
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        if not User.query.filter_by(email=unicode(form.email.data)).first():
+            thumbnail = userthumbnails.save(form.thumbnail.data)
+            user = User(form.email.data, form.password.data, first_name=form.first_name.data, 
+                    last_name=form.last_name.data, thumbnail=thumbnail)
+            activation_token = ActivationToken(user)
+            db.session.add(user)
+            db.session.add(activation_token)
+            db.session.commit()
+            email_activation_link(user.email, user.id, activation_token.value)
+            return render_template("register_success.html", active_page='none', user=user)
+        form.email.errors = ['Email address already registered']
+    return render_template("register.html", active_page='register', form=form)
 
-@app.route("/login", methods=["POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    user = User.query.filter_by(email=unicode(request.form['email'])).first()
-    if user and check_password_hash(user.password, request.form['password']) and user.active:
-        login_user(user)
-        resp = jsonify({'message': 'Success'})
-        resp.status_code = 200
-        return resp
-    if user: 
-        resp = jsonify({'message': 'Invalid password', 'passwordlink' : '%s?id=%s' % (url_for('send_new_password'), user.id)})
-        resp.status_code = 401
-        return resp
-    resp = jsonify({'message': 'Invalid email address'})
-    resp.status_code = 401
-    return resp
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=unicode(form.email.data)).first()
+        if user and check_password_hash(user.password, form.password.data) and user.active:
+            login_user(user)
+            return redirect(request.args.get("next") or url_for("home"))
+        if user:
+            form.password.errors = ['Invalid password.']
+            password_link = '%s?id=%s' % (url_for('send_new_password'), user.id)
+            return render_template('login.html', active_page="login", form=form, password_link=password_link)
+        form.email.errors = ['Invalid email address.']
+    return render_template('login.html', active_page="login", form=form)
 
 @app.route("/logout", methods=["GET"])
 def logout():
@@ -593,14 +587,8 @@ def races():
 # # # # #
 
 @app.route("/", methods=["GET"])
-def base():
-    return render_template("landing.html")
-
-@app.route("/pages/<page>", methods=["GET"])
-def pages(page=None):
-    if not page:
-        raise(500)
-    return render_template(page)
+def home():
+    return render_template("home.html", active_page="home")
 
 # # # # #
 

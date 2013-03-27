@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<hr>
+<form action="{{ url_for('register') }}" method="POST" enctype="multipart/form-data">
+  {{ form.hidden_tag() }}
+  <div class="container">
+    <div class="row-fluid">
+      <div class="span4">
+	<label>Email</label>
+	{{ forms.input(form.email, class="span12") }}
+	<label>Password</label>
+	{{ forms.input(form.password, class="span12") }}
+	<label>Confirm Password</label>
+	{{ forms.input(form.confirm, class="span12") }}
+      </div>
+      <div class="span4">
+	<label>First Name</label>
+	{{ forms.input(form.first_name, class="span12") }}
+	<label>Last Name</label>
+	{{ forms.input(form.last_name, class="span12") }}
+	<label>Thumbnail</label>
+	{{ forms.input(form.thumbnail, class="span12") }}
+      </div>
+      <div class="span4 register-button-container">
+	<button class="btn btn-success btn-large" type="submit">Get your account</button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
