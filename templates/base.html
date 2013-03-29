@@ -20,12 +20,16 @@
         <div class="navbar">
           <div class="navbar-inner">
             <div class="container">
+	      {% if current_user.is_authenticated() %}
+	      {% set login_logout = (url_for('logout'), 'logout', 'Logout') %}
+	      {% else %}
+	      {% set login_logout = (url_for('login'), 'login', 'Login') %}
+	      {% endif %}
 	      {% set navigation_bar = [
 	      (url_for('home'), 'home', 'Home'),
-	      (url_for('login'), 'login', 'Login'),
-	      ('/about/', 'about', 'About'),
+	      login_logout, 
+	      (url_for('change_password'), 'change_password', 'Change Password'),
 	      (url_for('register'), 'register', 'New Account'),
-	      ('/contact', 'contact', 'Contact'),
 	      ] -%}
 	      {% set active_page = active_page|default('home') -%}
               <ul class="nav">

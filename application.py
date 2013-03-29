@@ -361,7 +361,8 @@ def register():
             db.session.add(activation_token)
             db.session.commit()
             email_activation_link(user.email, user.id, activation_token.value)
-            return render_template("register_success.html", active_page='none', user=user)
+            message = "A confirmation email has been sent to <strong>%s</strong>. You have 5 minutes to check your email and activate your account." % user.email
+            return render_template("message.html", active_page='none', message=message)
         form.email.errors = ['Email address already registered']
     return render_template("register.html", active_page='register', form=form)
 
@@ -383,129 +384,69 @@ def login():
 @app.route("/logout", methods=["GET"])
 def logout():
     logout_user()
-    resp = jsonify({'message': 'Success'})
-    resp.status_code = 200
-    return resp
+    return redirect(url_for("home"));
 
 @app.route("/activate", methods=["GET"])
 def activate_user():
     id = request.args.get("id")
     token_value = request.args.get("token_value")
     if not id or not token_value:
-        resp = jsonify({'message': 'Missing activation information'})
-        resp.status_code = 400
-        return resp
+        message = 'Missing activation information.'
+        return render_template("message.html", active_page='none', message=message)
     user = User.query.get(id)
     if not user:
-        resp = jsonify({'message': 'Invalid user id'})
-        resp.status_code = 400
-        return resp
+        message = 'Invalid user id.'
+        return render_template("message.html", active_page='none', message=message)
     if user.activate(token_value):
-        resp = jsonify({'message': 'Success'})
-        resp.status_code = 200
-        return resp
-    resp = jsonify({'message': 'Invalid or expired activation link', 'activationlink': '%s?id=%s' % (url_for('send_activation_link'), user.id)})
-    resp.status_code = 403
-    return resp
+        message = 'Success! Your account has been activated. You may now <a href="%s">login</a>.' % url_for('login')
+        return render_template("message.html", active_page='none', message=message)
+    activationlink = '%s?id=%s' % (url_for('send_activation_link'), user.id)
+    message = 'Invalid or expired activation link. <a href="%s">Click here</a> to get a new one.' % activationlink
+    return render_template("message.html", active_page='none', message=message)
 
 @app.route("/send-activation-link", methods=["GET"])
 def send_activation_link():
     id = request.args.get("id")
     user = User.query.get(id)
     if not user:
-        resp = jsonify({'message': "Invalid user id"})
-        resp.status_code = 400
-        return resp
+        message = 'Invalid user id.'
+        return render_template("message.html", active_page='none', message=message)
     activation_token = ActivationToken(user)
     db.session.add(activation_token)
     db.session.commit()
     email_activation_link(user.email, user.id, activation_token.value)
-    resp = jsonify({'message': 'Success'})
-    resp.status_code = 200
-    return resp
+    message = "A confirmation email has been sent to <strong>%s</strong>. You have 5 minutes to check your email and activate your account." % user.email
+    return render_template("message.html", active_page='none', message=message)
 
 @app.route("/send-new-password", methods=["GET"])
 def send_new_password():
     id = request.args.get("id")
     user = User.query.get(id)
     if not user:
-        resp = jsonify({'message': "Invalid user id"})
-        resp.status_code = 400
-        return resp
+        message = 'Invalid user id.'
+        return render_template("message.html", active_page='none', message=message)
     new_password = User.generate_password()
     user.update_password(new_password)
     email_new_password(user.email, new_password)
-    resp = jsonify({'message': 'Success'})
-    resp.status_code = 200
-    return resp
+    message = "A new password has been sent to <strong>%s</strong>." % user.email 
+    return render_template("message.html", active_page='none', message=message)
+
 
 # authorization required
 
-@app.route("/public-profile", methods=["GET"])
+@app.route("/change-password", methods=["GET", "POST"])
 @login_required
-def public_profile():
-    id = request.args.get("id")
-    user = User.query.get(id)
-    if not user:
-        resp = jsonify({'message': "Invalid user id"})
-        resp.status_code = 400
-        return resp
-    user_types = [str(type) for type in user.user_types]
-    resp = jsonify({'firstname': user.first_name, 'lastname': user.last_name, 'fullname': user.name, 
-                    'types': user_types, 'thumbnailurl': user.thumbnail_url})
-    resp.status_code = 200
-    return resp
-
-@app.route("/private-profile", methods=["GET"])
-@login_required
-def private_profile():
-    id = request.args.get("id")
-    user = User.query.get(id)
-    if not user:
-        resp = jsonify({'message': "Invalid user id"})
-        resp.status_code = 400
-        return resp
-    if user.id != current_user.id:
-        resp = jsonify({'message': "You are not allowed to see this private profile"})
-        resp.status_code = 401
-        return resp
-    user_types = [str(type) for type in user.user_types]
-    resp = jsonify({'id': user.id, 'email': user.email, 'firstname': user.first_name, 'lastname': user.last_name, 'fullname': user.name,
-                    'types': user_types, 'thumbnailurl': user.thumbnail_url})
-    resp.status_code = 200
-    return resp
-
-@app.route("/update-profile", methods=["POST"])
-@login_required
-def update_profile():
-    id = request.args.get("id")
-    user = User.query.get(id)
-    if not user:
-        resp = jsonify({'message': "Invalid user id"})
-        resp.status_code = 400
-        return resp
-    if user.id != current_user.id:
-        resp = jsonify({'message': "You are not allowed to update other users profile"})
-        resp.status_code = 401
-        return resp
-    for key in request.form.keys():
-        if key == 'thumbnail':
-            thumbnail = userthumbnails.save(request.files[key])
-            user.thumbnail = thumbnail
-        elif key == 'firstname':
-            user.first_name = request.form[key]
-        elif key == 'lastname':
-            user.last_name = request.form[key]
-        elif key == 'password':
-            user.update_password(request.form[key])
+def change_password():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if check_password_hash(current_user.password, form.old_password.data):
+            current_user.update_password(form.new_password.data)
+            db.session.commit()
+            message = "Your password has been changed."
+            return render_template("message.html", active_page='none', message=message)
         else:
-            resp = jsonify({'message': 'Invalid user attribute: %s' % key})
-            resp.status_code = 400
-            return resp
-    db.session.commit()
-    resp = jsonify({'message': 'Success'})
-    resp.status_code = 201
-    return resp
+            form.old_password.errors = ["Old password incorrect."]
+    return render_template('change_password.html', active_page='change_password', form=form)
 
 @app.route("/logistics-registrations", methods=["GET"])
 @login_required
@@ -589,14 +530,6 @@ def races():
 @app.route("/", methods=["GET"])
 def home():
     return render_template("home.html", active_page="home")
-
-# # # # #
-
-class AdminIndex(BaseView):
-
-    @expose('/')
-    def index(self):
-        return self.render('admin/index.html')
 
 # # # # #
 

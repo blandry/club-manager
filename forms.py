@@ -12,7 +12,7 @@ class RegistrationForm(Form):
     last_name = TextField('Last Name', [validators.Required()])
     thumbnail = FileField('Thumbnail', [validators.Required()])
 
-class UpdateProfileForm(Form):
+class ChangePasswordForm(Form):
     old_password = PasswordField('Old Password', [validators.Required(),
                                                   validators.Length(max=30)])                                          
     new_password = PasswordField('New Password', [validators.Required(),
