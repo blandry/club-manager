@@ -480,7 +480,7 @@ def races():
 @login_required
 def logistics():
     registrations = current_user.logistics_registrations.all()
-    return render_template("logitics.html", active_page='logistics', registrations=registrations)
+    return render_template("logistics.html", active_page='logistics', registrations=registrations)
 
 @app.route("/reimbursements", methods=["GET"])
 @login_required
@@ -493,6 +493,21 @@ def reimbursements():
 def dues():
     dues = current_user.dues.all()
     return render_template("dues.html", active_page='dues', dues=dues)
+
+# # # # #
+
+class UserAdmin(ModelView):
+
+    can_create = False
+    column_list = ('first_name', 'last_name', 'email', 'active')
+
+    def is_accessible(self):
+        return current_user.is_authenticated()
+
+    def __init__(self, session, **kwargs):
+        super(UserAdmin, self).__init__(User, session, **kwargs)
+
+admin.add_view(UserAdmin(db.session))
 
 # # # # #
 
