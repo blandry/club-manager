@@ -348,6 +348,10 @@ class ReimbursementItem(db.Model):
 
 # # # # #
 
+@app.route("/", methods=["GET"])
+def home():
+    return render_template("home.html", active_page="home")
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     form = RegistrationForm()
@@ -364,7 +368,7 @@ def register():
             message = "A confirmation email has been sent to <strong>%s</strong>. You have 5 minutes to check your email and activate your account." % user.email
             return render_template("message.html", active_page='none', message=message)
         form.email.errors = ['Email address already registered']
-    return render_template("register.html", active_page='register', form=form)
+    return render_template("register.html", active_page='none', form=form)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -377,9 +381,9 @@ def login():
         if user:
             form.password.errors = ['Invalid password.']
             password_link = '%s?id=%s' % (url_for('send_new_password'), user.id)
-            return render_template('login.html', active_page="login", form=form, password_link=password_link)
+            return render_template('login.html', active_page='none', form=form, password_link=password_link)
         form.email.errors = ['Invalid email address.']
-    return render_template('login.html', active_page="login", form=form)
+    return render_template('login.html', active_page='none', form=form)
 
 @app.route("/logout", methods=["GET"])
 def logout():
@@ -431,108 +435,6 @@ def send_new_password():
     message = "A new password has been sent to <strong>%s</strong>." % user.email 
     return render_template("message.html", active_page='none', message=message)
 
-
-# authorization required
-
-@app.route("/change-password", methods=["GET", "POST"])
-@login_required
-def change_password():
-    form = ChangePasswordForm()
-    if form.validate_on_submit():
-        if check_password_hash(current_user.password, form.old_password.data):
-            current_user.update_password(form.new_password.data)
-            db.session.commit()
-            message = "Your password has been changed."
-            return render_template("message.html", active_page='none', message=message)
-        else:
-            form.old_password.errors = ["Old password incorrect."]
-    return render_template('change_password.html', active_page='change_password', form=form)
-
-@app.route("/logistics-registrations", methods=["GET"])
-@login_required
-def logistics_registrations():
-    id = request.args.get("id")
-    user = User.query.get(id)
-    if not user:
-        resp = jsonify({'message': "Invalid user id"})
-        resp.status_code = 400
-        return resp
-    if user.id != current_user.id:
-        resp = jsonify({'message': "You are not allowed to access other users logisitcs registrations"})
-        resp.status_code = 401
-        return resp
-    registrations = [{'racename': reg.race.name, 'racedate': str(reg.race.date())}
-                     for reg in user.logistics_registrations.all()]
-    resp = jsonify({'logisticsregistrations': registrations})
-    resp.status_code = 200
-    return resp
-
-@app.route("/reimbursement-requests", methods=["GET"])
-@login_required
-def reimbursement_requests():
-    id = request.args.get("id")
-    user = User.query.get(id)
-    if not user:
-        resp = jsonify({'message': "Invalid user id"})
-        resp.status_code = 400
-        return resp
-    if user.id != current_user.id:
-        resp = jsonify({'message': "You are not allowed to access other users reimbursement requests"})
-        resp.status_code = 401
-        return resp
-    reimbursements = list()
-    for reimb in user.reimbursement_requests.all():
-        items = list()
-        for item in reimb.reimbursement_items.all():
-            items.append({'id': item.id, 'reason': item.reason, 'amount': item.amount, 'receipturl': item.receipt_url})
-        reimbursements.append({'racename': reimb.race.name, 'racedate': str(reimb.race.date()),
-                               'status': reimb.status, 'comments': reimb.comments, 'items': items})
-    resp = jsonify({'reimbursementrequests': reimbursements})
-    resp.status_code = 200
-    return resp
-
-@app.route("/dues", methods=["GET"])
-@login_required
-def dues():
-    id = request.args.get("id")
-    user = User.query.get(id)
-    if not user:
-        resp = jsonify({'message': "Invalid user id"})
-        resp.status_code = 400
-        return resp
-    if user.id != current_user.id:
-        resp = jsonify({'message': "You are not allowed to access other users dues"})
-        resp.status_code = 401
-        return resp
-    dues = [{'amount': dues.amount, 'numberofraces': dues.number_of_races, 'numberofracesleft': dues.number_of_races_left,
-             'daysvalid': dues.days_valid, 'startdate': str(dues.start_date()), 'validontoday': dues.valid_on_today}
-            for dues in user.dues.all()]
-    resp = jsonify({'dues': dues})
-    resp.status_code = 200
-    return resp
-
-@app.route("/races", methods=["GET"])
-@login_required
-def races():
-    races = Race.query.order_by(Race.date.asc())
-    results = list()
-    for race in races:
-        tags = [tag.name for tag in race.tags]
-        entry = {'name': race.name, 'description': race.description, 'date': str(race.date()),
-                 'thumbnailurl': race.thumbnailurl, 'externalregistrationurl': race.external_registration_url, 'tags': tags}
-        results.append(entry)
-    resp = jsonify({'races': results})
-    resp.status_code = 200
-    return resp
-
-# # # # #
-
-@app.route("/", methods=["GET"])
-def home():
-    return render_template("home.html", active_page="home")
-
-# # # # #
-
 def email_activation_link(email, user_id, token_value):
     activation_link = "%s%s?id=%s&token_value=%s" % (settings.HOST_ADDRESS, url_for("activate_user"), user_id, token_value)
     if settings.DEBUG:
@@ -551,6 +453,46 @@ def email_new_password(email, new_password):
         msg = Message("New password request", recipients=[email])
         msg.html = body
         mail.send(msg)
+
+# authorization required
+
+@app.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if check_password_hash(current_user.password, form.old_password.data):
+            current_user.update_password(form.new_password.data)
+            db.session.commit()
+            message = "Your password has been changed."
+            return render_template("message.html", active_page='none', message=message)
+        else:
+            form.old_password.errors = ["Old password incorrect."]
+    return render_template('change_password.html', active_page='none', form=form)
+
+@app.route("/races", methods=["GET"])
+@login_required
+def races():
+    races = Race.query.order_by(Race.date.asc())
+    return render_template("races.html", active_page='races', races=races)
+
+@app.route("/logistics", methods=["GET"])
+@login_required
+def logistics():
+    registrations = current_user.logistics_registrations.all()
+    return render_template("logitics.html", active_page='logistics', registrations=registrations)
+
+@app.route("/reimbursements", methods=["GET"])
+@login_required
+def reimbursements():
+    requests = current_user.reimbursement_requests.all()
+    return render_template("reimbursements.html", active_page='reimbursements', requests=requests)
+
+@app.route("/dues", methods=["GET"])
+@login_required
+def dues():
+    dues = current_user.dues.all()
+    return render_template("dues.html", active_page='dues', dues=dues)
 
 # # # # #
 

@@ -31,3 +31,6 @@ body { padding-top: 20px; padding-bottom: 60px; }
 #login-btn { margin-top: 15px; }
 #forgot-password-link { margin-top: 15px; }
 #change-pass-btn { margin-top: 15px; }
+
+.title-box { position: relative; }
+.title-box-right { position: absolute; right: 0px; top: 8px; }

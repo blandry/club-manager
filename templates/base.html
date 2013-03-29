@@ -16,20 +16,35 @@
   <body>
     <div class="container">
       <div class="masthead">
-        <h3 class="muted">MIT Triathlon</h3>
+	<div class="title-box">
+	  <div class="title-box-left">
+            <h3 class="muted">MIT Triathlon</h3>
+	  </div>
+	  <div class="title-box-right">
+	    <div class="btn-group">
+	      <a class="btn"><i class="icon-user"></i> Account</a>
+	      <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+	      <ul class="dropdown-menu">
+		{% if current_user.is_authenticated() %}
+		<li><a href="{{ url_for('change_password') }}">Change password</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+		{% else %}
+		<li><a href="{{ url_for('login') }}">Login</a></li>
+                <li><a href="{{ url_for('register') }}">New account</a></li>
+		{% endif %}
+	      </ul>
+	    </div>
+	  </div>
+	</div>
         <div class="navbar">
           <div class="navbar-inner">
             <div class="container">
-	      {% if current_user.is_authenticated() %}
-	      {% set login_logout = (url_for('logout'), 'logout', 'Logout') %}
-	      {% else %}
-	      {% set login_logout = (url_for('login'), 'login', 'Login') %}
-	      {% endif %}
 	      {% set navigation_bar = [
 	      (url_for('home'), 'home', 'Home'),
-	      login_logout, 
-	      (url_for('change_password'), 'change_password', 'Change Password'),
-	      (url_for('register'), 'register', 'New Account'),
+	      (url_for('races'), 'races', 'Races'),
+	      (url_for('logistics'), 'logistics', 'Logistics'),
+	      (url_for('reimbursements'), 'reimbursements', 'Reimbursements'),
+	      (url_for('dues'), 'dues', 'Dues'),
 	      ] -%}
 	      {% set active_page = active_page|default('home') -%}
               <ul class="nav">
