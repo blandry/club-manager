@@ -8,7 +8,7 @@ import urllib
 import hashlib
 import json
 import settings
-from werkzeug import check_password_hash, generate_password_hash
+from werkzeug import check_password_hash, generate_password_hash, FileStorage
 from datetime import datetime, timedelta, date
 from flask import Flask, redirect, url_for, request, render_template, abort, send_from_directory, jsonify
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -18,7 +18,7 @@ from flask.ext.uploads import configure_uploads, UploadSet, IMAGES
 from flask.ext.admin import Admin, BaseView, expose
 from flask.ext.admin.model import BaseModelView
 from flask.ext.admin.contrib.sqlamodel import ModelView
-from forms import *
+from forms import RegistrationForm, ChangePasswordForm, LoginForm, AdminRaceForm, AdminTagForm
 
 # # # # #
 
@@ -50,7 +50,7 @@ class ReimbursementRequestStatus():
     INVALID = "Invalid"
     DEFAULT = PENDING
 
-admin = Admin(app)
+admin = Admin(app, name="Club Manager Admin")
 
 # # # # #
 
@@ -272,7 +272,7 @@ class Race(db.Model):
         self.name = name
         self.description = description
         self.date = date
-        self.thumbail = thumbnail
+        self.thumbnail = thumbnail
         self.external_registration_url = external_registration_url
         self.tags = tags
 
@@ -357,7 +357,10 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         if not User.query.filter_by(email=unicode(form.email.data)).first():
-            thumbnail = userthumbnails.save(form.thumbnail.data)
+            if form.thumbnail.has_file():
+                thumbnail = userthumbnails.save(form.thumbnail.data)
+            else:
+                thumbnail = userthumbnails.save(FileStorage(open('static/img/user.svg')))
             user = User(form.email.data, form.password.data, first_name=form.first_name.data, 
                     last_name=form.last_name.data, thumbnail=thumbnail)
             activation_token = ActivationToken(user)
@@ -496,18 +499,89 @@ def dues():
 
 # # # # #
 
-class UserAdmin(ModelView):
+class AdminModelView(ModelView):
+    
+    def is_accessible(self):
+        if current_user.is_authenticated():
+            return current_user.is_allowed_to('admin')
+        return False
+
+class UserAdmin(AdminModelView):
 
     can_create = False
     column_list = ('first_name', 'last_name', 'email', 'active')
 
-    def is_accessible(self):
-        return current_user.is_authenticated()
-
     def __init__(self, session, **kwargs):
         super(UserAdmin, self).__init__(User, session, **kwargs)
 
+class RaceAdmin(AdminModelView):
+
+    column_list = ('name', 'date')
+
+    def __init__(self, session, **kwargs):
+        super(RaceAdmin, self).__init__(Race, session, **kwargs)
+
+    def create_form(self, obj=None):
+        form = AdminRaceForm()
+        form.tags.query_factory=lambda:Tag.query.all()
+        return form
+
+    def edit_form(self, obj=None):  
+        form = AdminRaceForm(name=obj.name, description=obj.description, date=obj.date, thumbnail=obj.thumbnail, external_registration_url=obj.external_registration_url, tags=obj.tags)
+        form.tags.query_factory=lambda:Tag.query.all()
+        return form
+
+    def create_model(self, form):
+        if form.thumbnail.has_file():
+            thumbnail = racethumbnails.save(form.thumbnail.data)
+        else:
+            thumbnail = racethumbnails.save(FileStorage(open('static/img/bike.svg')))
+        race = Race(form.name.data, form.description.data, form.date.data, thumbnail, form.external_registration_url.data, form.tags.data)
+        db.session.add(race)
+        db.session.commit()
+        return True
+
+    def update_model(self, form, model):
+        model.name = form.name.data
+        model.description = form.description.data
+        model.date = form.date.data
+        if form.thumbnail.has_file():
+            thumbnail = racethumbnails.save(form.thumbnail.data)
+            model.thumbnail = thumbnail
+        model.external_registration_url = form.external_registration_url.data
+        model.tags = form.tags.data
+        db.session.commit()
+        return True
+
+class TagAdmin(AdminModelView):
+
+    column_list = ('name',)
+
+    def __init__(self, session, **kwargs):
+        super(TagAdmin, self).__init__(Tag, session, **kwargs)
+
+    def create_form(self, obj=None):
+        form = AdminTagForm()
+        return form
+
+    def edit_form(self, obj=None):
+        form = AdminTagForm(name=obj.name)
+        return form
+
+    def create_model(self, form):
+        tag = Tag(form.name.data)
+        db.session.add(tag)
+        db.session.commit()
+        return True
+
+    def update_model(self, form, model):
+        model.name = form.name.data
+        db.session.commit()
+        return True
+
 admin.add_view(UserAdmin(db.session))
+admin.add_view(RaceAdmin(db.session))
+admin.add_view(TagAdmin(db.session))
 
 # # # # #
 

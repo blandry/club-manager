@@ -28,6 +28,10 @@
 		{% if current_user.is_authenticated() %}
 		<li><a href="{{ url_for('change_password') }}">Change password</a></li>
                 <li><a href="{{ url_for('logout') }}">Logout</a></li>
+		{% if current_user.is_allowed_to('admin') %}
+		<li class="divider"></li>
+                <li><a href="/admin">Admin</a></li>
+		{% endif %}
 		{% else %}
 		<li><a href="{{ url_for('login') }}">Login</a></li>
                 <li><a href="{{ url_for('register') }}">New account</a></li>
@@ -64,6 +68,7 @@
         <p>Project by Benoit Landry 2013</p>
 	<p><small><a href="http://thenounproject.com/noun/bicycle/#icon-No1345" target="_blank">Bicycle</a> and <a href="http://thenounproject.com/noun/car/#icon-No4699" target="_blank">Car</a> designed by <a href="http://thenounproject.com/Olivier Guin" target="_blank">Olivier Guin</a> from The Noun Project</small></p>
 	<p><small><a href="http://thenounproject.com/noun/money/#icon-No9653" target="_blank">Money</a> designed by <a href="http://thenounproject.com/monstercritic" target="_blank">Sergey Shmidt</a> from The Noun Project</small></p>
+	<p><small><a href="http://thenounproject.com/noun/user/#icon-No10231" target="_blank">User</a> designed by <a href="http://thenounproject.com/schumanncombo" target="_blank">Richard Schumann</a> from The Noun Project</small></p>
       </div>
     </div> <!-- /container -->
     <script src="static/js/jquery.js"></script>
