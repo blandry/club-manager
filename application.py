@@ -18,7 +18,7 @@ from flask.ext.uploads import configure_uploads, UploadSet, IMAGES
 from flask.ext.admin import Admin, BaseView, expose
 from flask.ext.admin.model import BaseModelView
 from flask.ext.admin.contrib.sqlamodel import ModelView
-from forms import RegistrationForm, ChangePasswordForm, LoginForm, AdminRaceForm, AdminTagForm
+from forms import RegistrationForm, ChangePasswordForm, LoginForm, AdminRaceForm, AdminTagForm, AdminUserForm, AdminUserTypeForm
 
 # # # # #
 
@@ -514,6 +514,43 @@ class UserAdmin(AdminModelView):
     def __init__(self, session, **kwargs):
         super(UserAdmin, self).__init__(User, session, **kwargs)
 
+    def edit_form(self, obj=None):
+        form = AdminUserForm(active=obj.active, user_types=obj.user_types)
+        form.user_types.query_factory=lambda:UserType.query.all()
+        return form
+
+    def update_model(self, form, model):
+        model.active = form.active.data
+        model.user_types = form.user_types.data
+        db.session.commit()
+        return True
+
+class UserTypeAdmin(AdminModelView):
+
+    column_list = ('name',)
+
+    def __init__(self, session, **kwargs):
+        super(UserTypeAdmin, self).__init__(UserType, session, **kwargs)
+
+    def create_form(self, obj=None):
+        form = AdminUserTypeForm()
+        return form
+
+    def edit_form(self, obj=None):
+        form = AdminUserTypeForm(name=obj.name)
+        return form
+
+    def create_model(self, form):
+        type = UserType(form.name.data)
+        db.session.add(type)
+        db.session.commit()
+        return True
+
+    def update_model(self, form, model):
+        model.name = form.name.data
+        db.session.commit()
+        return True
+
 class RaceAdmin(AdminModelView):
 
     column_list = ('name', 'date')
@@ -579,9 +616,10 @@ class TagAdmin(AdminModelView):
         db.session.commit()
         return True
 
-admin.add_view(UserAdmin(db.session))
-admin.add_view(RaceAdmin(db.session))
-admin.add_view(TagAdmin(db.session))
+admin.add_view(UserAdmin(db.session, name='Manage users', category='Users'))
+admin.add_view(UserTypeAdmin(db.session, name='Manage user types', category='Users'))
+admin.add_view(RaceAdmin(db.session, name='Manage races', category='Races'))
+admin.add_view(TagAdmin(db.session, name='Manage race tags', category='Races'))
 
 # # # # #
 

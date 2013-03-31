@@ -1,4 +1,4 @@
-from flask.ext.wtf import Form, TextField, PasswordField, FileField, validators, TextAreaField, DateField, SelectMultipleField
+from flask.ext.wtf import Form, TextField, PasswordField, FileField, validators, TextAreaField, DateField, SelectMultipleField, BooleanField
 from flask.ext.admin.form import DatePickerWidget
 from flask.ext.admin.contrib.sqlamodel.fields import QuerySelectMultipleField
 
@@ -38,4 +38,11 @@ class AdminRaceForm(Form):
     tags = QuerySelectMultipleField('Tags', description="Hold down ctrl (Windows) or command (Mac) to select multiple options.")
 
 class AdminTagForm(Form):
+    name = TextField('Name', [validators.Required()])
+
+class AdminUserForm(Form):
+    active = BooleanField("Active")
+    user_types = QuerySelectMultipleField('User Types', description="Hold down ctrl (Windows) or command (Mac) to select multiple options.")
+
+class AdminUserTypeForm(Form):
     name = TextField('Name', [validators.Required()])
