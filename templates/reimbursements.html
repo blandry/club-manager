@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<hr>
 <div class="container">
+  <div class="well">
+    <a href="{{ url_for('new_reimbursement') }}"><button class="btn btn-success"><i class="icon-plus-sign icon-white"></i> New reimbursement request</button></a>
+  </div>
 
 </div>
 {% endblock %}

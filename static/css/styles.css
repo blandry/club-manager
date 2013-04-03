@@ -34,3 +34,6 @@ body { padding-top: 20px; padding-bottom: 60px; }
 
 .title-box { position: relative; }
 .title-box-right { position: absolute; right: 0px; top: 8px; }
+
+#new-reimbursement-btn { margin-top: 15px; }
+#new-reimbursement-item-btn { margin-top: 15px; }

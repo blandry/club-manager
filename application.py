@@ -18,7 +18,7 @@ from flask.ext.uploads import configure_uploads, UploadSet, IMAGES
 from flask.ext.admin import Admin, BaseView, expose
 from flask.ext.admin.model import BaseModelView
 from flask.ext.admin.contrib.sqlamodel import ModelView
-from forms import RegistrationForm, ChangePasswordForm, LoginForm, AdminRaceForm, AdminTagForm, AdminUserForm, AdminUserTypeForm
+from forms import RegistrationForm, ChangePasswordForm, LoginForm, AdminRaceForm, AdminTagForm, AdminUserForm, AdminUserTypeForm, ReimbursementRequestForm, ReimbursementItemForm
 
 # # # # #
 
@@ -48,7 +48,6 @@ class ReimbursementRequestStatus():
     PENDING = "Pending"
     PROCESSED ="Processed"
     INVALID = "Invalid"
-    DEFAULT = PENDING
 
 admin = Admin(app, name="Club Manager Admin")
 
@@ -308,6 +307,7 @@ class LogisticsRegistration(db.Model):
 class ReimbursementRequest(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     user = db.relationship('User',  backref=db.backref('reimbursement_requests', lazy='dynamic'))
     race_id = db.Column(db.Integer, db.ForeignKey('race.id'))
@@ -315,14 +315,16 @@ class ReimbursementRequest(db.Model):
     status = db.Column(db.String(120))
     comments = db.Column(db.Text)
     
-    def __init__(self, user, race, status=ReimbursementRequestStatus.DEFAULT, comments=""):
+    def __init__(self, name, user, race=None, status=ReimbursementRequestStatus.PENDING, comments=""):
+        self.name = name
         self.user = user
-        self.race = race
+        if race:
+            self.race = race
         self.status = status
         self.comments = comments
 
     def __repr__(self):
-        return "Reimbursement %s %s" % (str(self.race), str(self.user))
+        return self.name
 
 class ReimbursementItem(db.Model):
 
@@ -490,6 +492,37 @@ def logistics():
 def reimbursements():
     requests = current_user.reimbursement_requests.all()
     return render_template("reimbursements.html", active_page='reimbursements', requests=requests)
+
+@app.route("/new-reimbursement", methods=["GET", "POST"])
+@login_required
+def new_reimbursement():
+    form = ReimbursementRequestForm()
+    if form.validate_on_submit():
+        reimbursement = ReimbursementRequest(form.name.data, current_user, form.race.data, ReimbursementRequestStatus.PENDING, form.comments.data)
+        db.session.add(reimbursement)
+        db.session.commit()
+        return redirect(url_for('reimbursements'))
+    form.race.query_factory=lambda:Race.query.all()
+    return render_template("new_reimbursement.html", active_page='none', form=form)
+
+@app.route("/new-reimbursement-item", methods=["GET", "POST"])
+@login_required
+def new_reimbursement_item():
+    form = ReimbursementItemForm()
+    if form.validate_on_submit():
+        # make a field request-id in the form that is required and make the template fill it up when generating
+        requestid = request.args.get('requestid')
+        if not requestid:
+            abort(400)
+        reimbursement = ReimbursementRequest.query.get(int(requestid))
+        if reimbursement.user != current_user:
+            abort(401)
+        receipt = receipts.save(form.receipt.data)
+        item = ReimbursementItem(reimbursement, form.reason.data, form.amount.data, receipt)
+        db.session.add(item)
+        db.session.commit()
+        return redirect(url_for('reimbursements'))
+    return render_template('new_reimbursement_item.html', active_page='none', form=form)
 
 @app.route("/dues", methods=["GET"])
 @login_required

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<hr>
+<form action="" method="POST">
+  {{ form.hidden_tag() }}
+  <div class="container">
+    <div class="row-fluid">
+      <div class="span4">
+      </div>
+      <div class="span4">
+	<label>Name of your request</label>
+	{{ forms.input(form.name, class="span12", id="request-name") }}
+	<label>Race <em>(optional)</em></label>
+	{{ forms.input(form.race, class="span12") }}
+	<label>Comments <em>(optional)</em></label>
+        {{ forms.input(form.comments, class="span12") }}
+	<button id="new-reimbursement-btn" class="btn btn-success pull-left" type="submit">Submit</button>
+      </div>
+      <div class="span4">
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

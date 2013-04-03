@@ -1,6 +1,7 @@
-from flask.ext.wtf import Form, TextField, PasswordField, FileField, validators, TextAreaField, DateField, SelectMultipleField, BooleanField
+from flask.ext.wtf import Form, TextField, PasswordField, FileField, validators, TextAreaField, DateField, SelectMultipleField, BooleanField, file_required
+from flask.ext.wtf.html5 import DecimalField
 from flask.ext.admin.form import DatePickerWidget
-from flask.ext.admin.contrib.sqlamodel.fields import QuerySelectMultipleField
+from flask.ext.admin.contrib.sqlamodel.fields import QuerySelectMultipleField, QuerySelectField
 
 class RegistrationForm(Form):
     email = TextField('Email Address', [validators.Required(),
@@ -28,6 +29,16 @@ class LoginForm(Form):
                                         validators.Length(max=254)])
     password = PasswordField('Password', [validators.Required(),
                                           validators.Length(max=30)])
+
+class ReimbursementRequestForm(Form):
+    name = TextField('Name', [validators.Required()])
+    race = QuerySelectField('Race', [validators.Optional()], allow_blank=True)
+    comments = TextAreaField('Comments')
+
+class ReimbursementItemForm(Form):
+    reason = TextField('Reason', [validators.Required()])
+    amount = DecimalField(label='Amount', validators=[validators.Required()])
+    receipt = FileField('Receipt PDF', [file_required('A receipt is required.')])
 
 class AdminRaceForm(Form):
     name = TextField('Name', [validators.Required()])

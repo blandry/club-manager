@@ -73,5 +73,11 @@
     </div> <!-- /container -->
     <script src="static/js/jquery.js"></script>
     <script src="static/js/bootstrap.js"></script>
+    <script>
+      $(document).ready(function() {
+      $('#request-name').popover({'trigger':'focus', 'content':'Name your reimbursement request for your own personal use. For example <em>Season Opener 2013</em>.', 'html':true});
+      $('#item-reason').popover({'trigger':'focus', 'content':'The actual thing you paid for like <em>race registration</em>.', 'html':true});
+      });
+    </script>
   </body>
 </html>
