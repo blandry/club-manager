@@ -37,3 +37,7 @@ body { padding-top: 20px; padding-bottom: 60px; }
 
 #new-reimbursement-btn { margin-top: 15px; }
 #new-reimbursement-item-btn { margin-top: 15px; }
+
+.request-btns { margin-right: 15px; margin-left: 10px; }
+.request-name { margin-top: 15px; } 
+.request-info { margin-top: 15px; }

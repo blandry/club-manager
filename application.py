@@ -501,7 +501,20 @@ def new_reimbursement():
         reimbursement = ReimbursementRequest(form.name.data, current_user, form.race.data, ReimbursementRequestStatus.PENDING, form.comments.data)
         db.session.add(reimbursement)
         db.session.commit()
-        return redirect(url_for('reimbursements'))
+        return redirect(url_for('new_reimbursement_item', request_id=reimbursement.id))
+    form.race.query_factory=lambda:Race.query.all()
+    return render_template("new_reimbursement.html", active_page='none', form=form)
+
+@app.route("/edit-reimbursement", methods=["GET", "POST"])
+@login_required
+def edit_reimbursement():
+    form = ReimbursementRequestForm()
+    if form.validate_on_submit():
+        pass
+    reimbursement = ReimbursementRequest.query.get(int(request.args.get('request_id')))
+    if not(reimbursement) or reimbursement.user != current_user:
+        abort(401)
+    form = ReimbursementRequestForm(name=reimbursement.name, race=reimbursement.race, comments=reimbursement.comments)
     form.race.query_factory=lambda:Race.query.all()
     return render_template("new_reimbursement.html", active_page='none', form=form)
 
@@ -510,18 +523,16 @@ def new_reimbursement():
 def new_reimbursement_item():
     form = ReimbursementItemForm()
     if form.validate_on_submit():
-        # make a field request-id in the form that is required and make the template fill it up when generating
-        requestid = request.args.get('requestid')
-        if not requestid:
-            abort(400)
-        reimbursement = ReimbursementRequest.query.get(int(requestid))
-        if reimbursement.user != current_user:
+        reimbursement = ReimbursementRequest.query.get(int(form.request_id.data))
+        if not(reimbursement) or reimbursement.user != current_user:
             abort(401)
         receipt = receipts.save(form.receipt.data)
         item = ReimbursementItem(reimbursement, form.reason.data, form.amount.data, receipt)
         db.session.add(item)
         db.session.commit()
         return redirect(url_for('reimbursements'))
+    request_id = request.args.get('request_id')
+    form.request_id.data = request_id
     return render_template('new_reimbursement_item.html', active_page='none', form=form)
 
 @app.route("/dues", methods=["GET"])

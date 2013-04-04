@@ -1,5 +1,4 @@
-from flask.ext.wtf import Form, TextField, PasswordField, FileField, validators, TextAreaField, DateField, SelectMultipleField, BooleanField, file_required
-from flask.ext.wtf.html5 import DecimalField
+from flask.ext.wtf import Form, TextField, PasswordField, FileField, validators, TextAreaField, DateField, SelectMultipleField, BooleanField, file_required, HiddenField
 from flask.ext.admin.form import DatePickerWidget
 from flask.ext.admin.contrib.sqlamodel.fields import QuerySelectMultipleField, QuerySelectField
 
@@ -36,9 +35,11 @@ class ReimbursementRequestForm(Form):
     comments = TextAreaField('Comments')
 
 class ReimbursementItemForm(Form):
+    request_id = HiddenField('Reimbursement request id', [validators.Required(), validators.Regexp('^[0-9]\d*$')])
     reason = TextField('Reason', [validators.Required()])
-    amount = DecimalField(label='Amount', validators=[validators.Required()])
-    receipt = FileField('Receipt PDF', [file_required('A receipt is required.')])
+    amount = TextField(label='Amount', validators=[validators.Required(), 
+                                                   validators.Regexp('^([0-9]{1,3},([0-9]{3},)*[0-9]{3}|[0-9]+)(.[0-9][0-9])?$', message='Invalid amount.')])
+    receipt = FileField('Receipt PDF', [file_required('')])
 
 class AdminRaceForm(Form):
     name = TextField('Name', [validators.Required()])
