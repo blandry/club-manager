@@ -5,7 +5,6 @@
   <div class="well">
     <a href="{{ url_for('new_reimbursement') }}"><button class="btn btn-success"><i class="icon-plus-sign icon-white"></i> New reimbursement request</button></a>
   </div>
-  {% for request in requests %}
   <table class="table">
     <thead>
       <tr>
@@ -16,6 +15,7 @@
       </tr>
     </thead>
     <tbody>
+      {% for request in requests %}
       <tr class='{% if request.status=="Pending" %}info{% elif request.status=="Processed" %}success{% else %}error{% endif %}'>
 	<td>
 	  <div class="btn-toolbar pull-left request-btns">
@@ -30,20 +30,8 @@
 	<td><p class="request-info">{{ request.comments }}</p></td>
 	<td><p class="request-info">{{ request.status }}</p></td>
       </tr>
-      {% for item in request.reimbursement_items.all() %}
-      <tr>
-	<td>
-	  <a href="{{ item.receipt_url }}"><p>{{ item.reason }}: ${{ item.amount }}</p></a>
-	</td>
-      </tr>
       {% endfor %}
-      <div class="btn-toolbar">
-        <div class="btn-group">
-          <a class="btn" href="{{ url_for('new_reimbursement_item', request_id=request.id) }}"><i class="icon-plus-sign"></i></a>
-        </div>
-      </div>
     </tbody>
   </table>
-  {% endfor %}
 </div>
 {% endblock %}
