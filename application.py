@@ -359,7 +359,7 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         if not User.query.filter_by(email=unicode(form.email.data)).first():
-            if form.thumbnail.has_file():
+            if form.thumbnail.data:
                 thumbnail = userthumbnails.save(form.thumbnail.data)
             else:
                 thumbnail = userthumbnails.save(FileStorage(open('static/img/user.svg')))
@@ -613,7 +613,7 @@ class RaceAdmin(AdminModelView):
         return form
 
     def create_model(self, form):
-        if form.thumbnail.has_file():
+        if form.thumbnail.data:
             thumbnail = racethumbnails.save(form.thumbnail.data)
         else:
             thumbnail = racethumbnails.save(FileStorage(open('static/img/bike.svg')))
@@ -626,7 +626,7 @@ class RaceAdmin(AdminModelView):
         model.name = form.name.data
         model.description = form.description.data
         model.date = form.date.data
-        if form.thumbnail.has_file():
+        if form.thumbnail.data:
             thumbnail = racethumbnails.save(form.thumbnail.data)
             model.thumbnail = thumbnail
         model.external_registration_url = form.external_registration_url.data
