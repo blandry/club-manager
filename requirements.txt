@@ -5,3 +5,4 @@ flask-mail
 flask-admin
 flask-uploads
 flask-wtf
+-e git://github.com/blandry/garmin-extractor.git#egg=garminextractor
