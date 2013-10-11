@@ -541,6 +541,35 @@ def dues():
     dues = current_user.dues.all()
     return render_template("dues.html", active_page='dues', dues=dues)
 
+class Device(db.Model):
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, primary_key=True)
+    user = db.relationship('User', backref=db.backref('devices', lazy='dynamic'))
+    gc_username = db.Column(db.String(120))
+    gc_password = db.Column(db.String(120))
+
+    def __init__(self, id, user, gc_username, gc_password):
+        self.id = id
+        self.user = user
+        self.gc_username = gc_username
+        self.gc_password = gc_password
+
+@app.route("/garmin-extractor", methods=["GET", "POST"])
+@login_required
+def garmin_extractor():
+    devices = []
+    for (dirpath, dirnames, filenames) in os.walk('/home/blandry/.config/garmin-extractor'):
+        devices.extend(dirnames)
+        break
+    devices = [d for d in devices if d.isdigit()]
+    return render_template("garmin_extractor.html", active_page='garmin-extractor', unclaimed_devices=devices);
+
+@app.route("/claim-device", methods=["GET"])
+@login_required
+def claim_device():
+    
+
 # # # # #
 
 class AdminModelView(ModelView):

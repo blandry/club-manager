@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<hr>
+<div class="container">
+
+<table>
+{% for device in unclaimed_devices %}
+<tr>
+<td>
+<p><a class="btn" href="claim-device/{{ device }}">Claim device</a></p>
+</td>
+<td>
+<p><strong>
+&nbsp&nbsp&nbsp{{ device }}
+</strong></p>
+</td>
+</tr>
+{% endfor %}
+</table>
+
+</div>
+{% endblock %}
