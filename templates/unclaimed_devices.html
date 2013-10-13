@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<hr>
+<div class="container">
+  <div class="row-fluid">
+    <div class="span4">
+    </div>
+    <div class="span8">
+      <table class="table table-hover">
+	<thead>
+	  <tr>
+	    <th>Device Type</th>
+	    <th>Device ID</th>
+	    <th>Claim</th>
+	  </tr>
+	</thead>
+	<tbody>
+	  {% for device in unclaimed_devices %}
+	  <tr>
+	    <td>
+	    </td>
+	    <td>
+	      {{ device }}
+	    </td>
+	    <td>
+	      <a class="btn btn-info" href="claim-device/{{ device }}">Claim</a>
+	    </td>
+	  </tr>
+	  {% endfor %}
+	</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

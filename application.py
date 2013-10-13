@@ -38,18 +38,10 @@ app.config.update(settings.SMTP_SETTINGS)
 mail = Mail(app)
 
 app.config['UPLOADS_DEFAULT_DEST'] = 'uploads'
-receipts = UploadSet('receipts', ['pdf'])
-racethumbnails = UploadSet('racethumbnails', IMAGES)
 userthumbnails = UploadSet('userthumbnails', IMAGES)
-configure_uploads(app, (receipts, racethumbnails, userthumbnails))
+configure_uploads(app, (userthumbnails,))
 
-class ReimbursementRequestStatus():
-    """ Enum of statuses for reimbursement requests """
-    PENDING = "Pending"
-    PROCESSED ="Processed"
-    INVALID = "Invalid"
-
-admin = Admin(app, name="Club Manager Admin")
+admin = Admin(app, name="Raspberry Agent Admin")
 
 # # # # #
 
@@ -145,15 +137,6 @@ class User(db.Model, UserMixin):
                 return True
         return False
 
-    def has_valid_dues_for(self, race_id):
-        race = Race.query.get(race_id)
-        if not race:
-            return False
-        for due in self.dues:
-            if due.valid_on(race.date):
-                return True
-        return False
-
     @staticmethod
     def generate_password(size=10, chars=string.ascii_uppercase + string.ascii_lowercase + string.digits):
         return ''.join(random.choice(chars) for x in range(size))
@@ -186,167 +169,21 @@ class ActivationToken(db.Model):
     def check_if_valid(self, checked_value):
         return (not(self.is_expired) and self.check_value(checked_value))
 
-class Dues(db.Model):
+class Device(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.Integer)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    user = db.relationship('User',  backref=db.backref('dues', lazy='dynamic'))
-    amount = db.Column(db.Float)
-    number_of_races = db.Column(db.Integer)
-    days_valid = db.Column(db.Integer)
-    start_date = db.Column(db.Date)
+    user = db.relationship('User', backref=db.backref('devices', lazy='dynamic'))
+    gc_username = db.Column(db.String(120))
+    gc_password = db.Column(db.String(120))
 
-    def __init__(self, user, amount, number_of_races, days_valid, start_date=None):
+    def __init__(self, device_id, user, gc_username, gc_password):
+        self.device_id = device_id
         self.user = user
-        self.amount = amount
-        self.number_of_races = number_of_races
-        self.days_valid = days_valid
-        if not start_date:
-            start_date = date.today()
-        self.start_date = start_date
+        self.gc_username = gc_username
+        self.gc_password = gc_password
 
-    def __repr__(self):
-        return "%s %s %s" % (str(self.amount), str(self.start_date), str(self.user))
-
-    @property
-    def duration(self):
-        return timedelta(days=self.days_valid)
-
-    @property
-    def number_of_races_left(self):
-        return (self.number_of_races - len(self.dues_utilisations.all()))
-
-    @property
-    def end_date(self):
-        return self.start_date + self.duration
-
-    def valid_on(self, date):
-        return (self.start_date <= date and date <= self.end_date and self.number_of_races_left > 0)
-
-    @property
-    def valid_on_today(self):
-        today = date.today()
-        return self.valid_on(today)
-
-class DuesUtilisation(db.Model):
-
-    id = db.Column(db.Integer, primary_key=True)
-    reimbursement_item_id = db.Column(db.Integer, db.ForeignKey('reimbursement_item.id'))
-    reimbursement_item = db.relationship('ReimbursementItem',  backref=db.backref('dues_utilisations', lazy='dynamic'))
-    dues_id = db.Column(db.Integer, db.ForeignKey('dues.id'))
-    dues = db.relationship('Dues',  backref=db.backref('dues_utilisations', lazy='dynamic'))
-
-    def __init__(self, reimbursement_item, dues):
-        self.reimbursement_item = reimbursement_item
-        self.dues = dues
-
-race_tags = db.Table('race_tags',
-                     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id')),
-                     db.Column('race_id', db.Integer, db.ForeignKey('race.id'))
-)
-
-class Tag(db.Model):
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), unique=True)
-
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return str(self.name)
-
-class Race(db.Model):
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80))
-    description = db.Column(db.Text)
-    date = db.Column(db.Date)
-    thumbnail = db.Column(db.String)
-    external_registration_url = db.Column(db.String)
-    tags = db.relationship('Tag', secondary=race_tags,
-                           backref=db.backref('races', lazy='dynamic'))
-
-    def __init__(self, name, description, date, thumbnail="", external_registration_url="", tags=[]):
-        self.name = name
-        self.description = description
-        self.date = date
-        self.thumbnail = thumbnail
-        self.external_registration_url = external_registration_url
-        self.tags = tags
-
-    def __repr__(self):
-        return '%s %s' % (str(self.name), str(self.date))
-
-    @property
-    def thumbnail_url(self):
-        return racethumbnails.url(self.thumbnail)
-
-    @property
-    def number_registered(self):
-        return len(self.logistics_registrations.all())
-
-    def has_tag(self, tag_name):
-        return Tag.query.filter_by(name=tag_name).first() in self.tags
-
-class LogisticsRegistration(db.Model):
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    user = db.relationship('User',  backref=db.backref('logistics_registrations', lazy='dynamic'))
-    race_id = db.Column(db.Integer, db.ForeignKey('race.id'))
-    race = db.relationship('Race',  backref=db.backref('logistics_registrations', lazy='dynamic'))
-
-    def __init__(self, user, race):
-        self.user = user
-        self.race = race
-
-    def __repr__(self):
-        return "Logistics Registration %s %s" % (str(self.race), str(self.user))
-
-class ReimbursementRequest(db.Model):
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    user = db.relationship('User',  backref=db.backref('reimbursement_requests', lazy='dynamic'))
-    race_id = db.Column(db.Integer, db.ForeignKey('race.id'))
-    race = db.relationship('Race',  backref=db.backref('reimbursement_requests', lazy='dynamic'))
-    status = db.Column(db.String(120))
-    comments = db.Column(db.Text)
-    
-    def __init__(self, name, user, race=None, status=ReimbursementRequestStatus.PENDING, comments=""):
-        self.name = name
-        self.user = user
-        if race:
-            self.race = race
-        self.status = status
-        self.comments = comments
-
-    def __repr__(self):
-        return self.name
-
-class ReimbursementItem(db.Model):
-
-    id = db.Column(db.Integer, primary_key=True)
-    reimbursement_request_id = db.Column(db.Integer, db.ForeignKey('reimbursement_request.id'))
-    reimbursement_request = db.relationship('ReimbursementRequest',  backref=db.backref('reimbursement_items', lazy='dynamic'))
-    reason = db.Column(db.String)
-    amount = db.Column(db.Float)
-    receipt = db.Column(db.String)
-
-    def __init__(self, reimbursement_request, reason, amount, receipt):
-        self.reimbursement_request = reimbursement_request
-        self.reason = reason
-        self.amount = amount
-        self.receipt = receipt
-
-    def __repr__(self):
-        return "%s %s %s" % (str(self.reimbursement_request), str(self.reason), str(self.amount))
-
-    @property
-    def receipt_url(self):
-        return receipts.url(self.receipt)
 
 # # # # #
 
@@ -475,100 +312,21 @@ def change_password():
             form.old_password.errors = ["Old password incorrect."]
     return render_template('change_password.html', active_page='none', form=form)
 
-@app.route("/races", methods=["GET"])
+@app.route("/unclaimed-devices", methods=["GET"])
 @login_required
-def races():
-    races = Race.query.order_by(Race.date.asc())
-    return render_template("races.html", active_page='races', races=races)
-
-@app.route("/logistics", methods=["GET"])
-@login_required
-def logistics():
-    registrations = current_user.logistics_registrations.all()
-    return render_template("logistics.html", active_page='logistics', registrations=registrations)
-
-@app.route("/reimbursements", methods=["GET"])
-@login_required
-def reimbursements():
-    requests = current_user.reimbursement_requests.all()
-    return render_template("reimbursements.html", active_page='reimbursements', requests=requests)
-
-@app.route("/new-reimbursement", methods=["GET", "POST"])
-@login_required
-def new_reimbursement():
-    form = ReimbursementRequestForm()
-    if form.validate_on_submit():
-        reimbursement = ReimbursementRequest(form.name.data, current_user, form.race.data, ReimbursementRequestStatus.PENDING, form.comments.data)
-        db.session.add(reimbursement)
-        db.session.commit()
-        return redirect(url_for('new_reimbursement_item', request_id=reimbursement.id))
-    form.race.query_factory=lambda:Race.query.all()
-    return render_template("new_reimbursement.html", active_page='none', form=form)
-
-@app.route("/edit-reimbursement", methods=["GET", "POST"])
-@login_required
-def edit_reimbursement():
-    form = ReimbursementRequestForm()
-    if form.validate_on_submit():
-        pass
-    reimbursement = ReimbursementRequest.query.get(int(request.args.get('request_id')))
-    if not(reimbursement) or reimbursement.user != current_user:
-        abort(401)
-    form = ReimbursementRequestForm(name=reimbursement.name, race=reimbursement.race, comments=reimbursement.comments)
-    form.race.query_factory=lambda:Race.query.all()
-    return render_template("new_reimbursement.html", active_page='none', form=form)
-
-@app.route("/new-reimbursement-item", methods=["GET", "POST"])
-@login_required
-def new_reimbursement_item():
-    form = ReimbursementItemForm()
-    if form.validate_on_submit():
-        reimbursement = ReimbursementRequest.query.get(int(form.request_id.data))
-        if not(reimbursement) or reimbursement.user != current_user:
-            abort(401)
-        receipt = receipts.save(form.receipt.data)
-        item = ReimbursementItem(reimbursement, form.reason.data, form.amount.data, receipt)
-        db.session.add(item)
-        db.session.commit()
-        return redirect(url_for('reimbursements'))
-    request_id = request.args.get('request_id')
-    form.request_id.data = request_id
-    return render_template('new_reimbursement_item.html', active_page='none', form=form)
-
-@app.route("/dues", methods=["GET"])
-@login_required
-def dues():
-    dues = current_user.dues.all()
-    return render_template("dues.html", active_page='dues', dues=dues)
-
-class Device(db.Model):
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, primary_key=True)
-    user = db.relationship('User', backref=db.backref('devices', lazy='dynamic'))
-    gc_username = db.Column(db.String(120))
-    gc_password = db.Column(db.String(120))
-
-    def __init__(self, id, user, gc_username, gc_password):
-        self.id = id
-        self.user = user
-        self.gc_username = gc_username
-        self.gc_password = gc_password
-
-@app.route("/garmin-extractor", methods=["GET", "POST"])
-@login_required
-def garmin_extractor():
-    devices = []
+def unclaimed_devices():
+    claimed_devices = [d.device_id for d in Device.query.all()]
+    unclaimed_devices = []
     for (dirpath, dirnames, filenames) in os.walk('/home/blandry/.config/garmin-extractor'):
-        devices.extend(dirnames)
+        unclaimed_devices.extend([d for d in dirnames if d.isdigit() and int(d) not in claimed_devices])
         break
-    devices = [d for d in devices if d.isdigit()]
-    return render_template("garmin_extractor.html", active_page='garmin-extractor', unclaimed_devices=devices);
+    return render_template("unclaimed_devices.html", 
+                           unclaimed_devices=unclaimed_devices);
 
-@app.route("/claim-device", methods=["GET"])
+@app.route("/claim-device/<device_id>")
 @login_required
-def claim_device():
-    
+def claim_device(device_id):
+    return redirect(url_for("home"));
 
 # # # # #
 
@@ -624,75 +382,9 @@ class UserTypeAdmin(AdminModelView):
         db.session.commit()
         return True
 
-class RaceAdmin(AdminModelView):
-
-    column_list = ('name', 'date')
-
-    def __init__(self, session, **kwargs):
-        super(RaceAdmin, self).__init__(Race, session, **kwargs)
-
-    def create_form(self, obj=None):
-        form = AdminRaceForm()
-        form.tags.query_factory=lambda:Tag.query.all()
-        return form
-
-    def edit_form(self, obj=None):  
-        form = AdminRaceForm(name=obj.name, description=obj.description, date=obj.date, thumbnail=obj.thumbnail, external_registration_url=obj.external_registration_url, tags=obj.tags)
-        form.tags.query_factory=lambda:Tag.query.all()
-        return form
-
-    def create_model(self, form):
-        if form.thumbnail.data:
-            thumbnail = racethumbnails.save(form.thumbnail.data)
-        else:
-            thumbnail = racethumbnails.save(FileStorage(open('static/img/bike.svg')))
-        race = Race(form.name.data, form.description.data, form.date.data, thumbnail, form.external_registration_url.data, form.tags.data)
-        db.session.add(race)
-        db.session.commit()
-        return True
-
-    def update_model(self, form, model):
-        model.name = form.name.data
-        model.description = form.description.data
-        model.date = form.date.data
-        if form.thumbnail.data:
-            thumbnail = racethumbnails.save(form.thumbnail.data)
-            model.thumbnail = thumbnail
-        model.external_registration_url = form.external_registration_url.data
-        model.tags = form.tags.data
-        db.session.commit()
-        return True
-
-class TagAdmin(AdminModelView):
-
-    column_list = ('name',)
-
-    def __init__(self, session, **kwargs):
-        super(TagAdmin, self).__init__(Tag, session, **kwargs)
-
-    def create_form(self, obj=None):
-        form = AdminTagForm()
-        return form
-
-    def edit_form(self, obj=None):
-        form = AdminTagForm(name=obj.name)
-        return form
-
-    def create_model(self, form):
-        tag = Tag(form.name.data)
-        db.session.add(tag)
-        db.session.commit()
-        return True
-
-    def update_model(self, form, model):
-        model.name = form.name.data
-        db.session.commit()
-        return True
 
 admin.add_view(UserAdmin(db.session, name='Manage users', category='Users'))
 admin.add_view(UserTypeAdmin(db.session, name='Manage user types', category='Users'))
-admin.add_view(RaceAdmin(db.session, name='Manage races', category='Races'))
-admin.add_view(TagAdmin(db.session, name='Manage race tags', category='Races'))
 
 # # # # #
 

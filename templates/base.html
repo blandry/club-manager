@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Club Manager</title>
+    <title>Raspberry Agent</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="Benoit Landry">
@@ -18,7 +18,7 @@
       <div class="masthead">
 	<div class="title-box">
 	  <div class="title-box-left">
-            <h3 class="muted">MIT Triathlon</h3>
+            <h3 class="muted">&nbsp</h3>
 	  </div>
 	  <div class="title-box-right">
 	    <div class="btn-group">
@@ -40,26 +40,6 @@
 	    </div>
 	  </div>
 	</div>
-        <div class="navbar">
-          <div class="navbar-inner">
-            <div class="container">
-	      {% set navigation_bar = [
-	      (url_for('home'), 'home', 'Home'),
-	      (url_for('garmin_extractor'), 'garmin-extractor','Ant+'),
-	      (url_for('races'), 'races', 'Races'),
-	      (url_for('logistics'), 'logistics', 'Logistics'),
-	      (url_for('reimbursements'), 'reimbursements', 'Reimbursements'),
-	      (url_for('dues'), 'dues', 'Dues'),
-	      ] -%}
-	      {% set active_page = active_page|default('home') -%}
-              <ul class="nav">
-		{% for href, id, caption in navigation_bar %}
-		<li {% if id == active_page %} class="active"{% endif %}><a href="{{ href|e }}">{{ caption|e }}</a></li>
-		{% endfor %}
-              </ul>
-            </div>
-          </div>
-        </div><!-- /.navbar -->
       </div>
       {% import 'macros/forms.html' as forms %}
       {% block content %}
@@ -67,9 +47,6 @@
       <div class="footer">
 	<hr>
         <p>Project by Benoit Landry 2013</p>
-	<p><small><a href="http://thenounproject.com/noun/bicycle/#icon-No1345" target="_blank">Bicycle</a> and <a href="http://thenounproject.com/noun/car/#icon-No4699" target="_blank">Car</a> designed by <a href="http://thenounproject.com/Olivier Guin" target="_blank">Olivier Guin</a> from The Noun Project</small></p>
-	<p><small><a href="http://thenounproject.com/noun/money/#icon-No9653" target="_blank">Money</a> designed by <a href="http://thenounproject.com/monstercritic" target="_blank">Sergey Shmidt</a> from The Noun Project</small></p>
-	<p><small><a href="http://thenounproject.com/noun/user/#icon-No10231" target="_blank">User</a> designed by <a href="http://thenounproject.com/schumanncombo" target="_blank">Richard Schumann</a> from The Noun Project</small></p>
       </div>
     </div> <!-- /container -->
     <script src="static/js/jquery.js"></script>
